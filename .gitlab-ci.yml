@@ -1,0 +1,29 @@
+image: gitlab.bucle.dev:5050/gitlab-runner/gitlab-runner:latest
+
+services:
+  - mysql:5.7
+
+variables:
+  MYSQL_DATABASE: homestead
+  MYSQL_ROOT_PASSWORD: secret
+  DB_HOST: mysql
+  DB_USERNAME: root
+
+stages:
+  - deploy_dev
+
+deploy_dev:
+  stage: deploy_dev
+  script:
+    - "which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )"
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n StrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
+    - ~/.config/composer/vendor/bin/envoy run deploy --commit="$CI_COMMIT_SHA" --branch="$CI_COMMIT_BRANCH" --.env=production --serverIp=$DEPLOY_SERVER
+  environment:
+    name: dev
+    url: https://dev.app.intelli-care.ai/
+  only:
+    - dev
